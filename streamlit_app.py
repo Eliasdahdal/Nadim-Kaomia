@@ -8,6 +8,11 @@ from io import BytesIO
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+# Function to convert numbers to Arabic numerals
+def convert_to_arabic_numerals(number):
+    arabic_numbers = str(number).translate(str.maketrans('0123456789', '٠١٢٣٤٥٦٧٨٩'))
+    return arabic_numbers
+
 # Function to set text direction to RTL and justify alignment for paragraphs
 def set_rtl_and_justify(paragraph):
     paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY  # Justify alignment
@@ -80,7 +85,9 @@ def create_word_file(header, footer, questions, true_false_statements, file_name
     set_rtl_and_justify(mcq_intro)
 
     for idx, q in enumerate(questions, 1):
-        question_paragraph = doc.add_paragraph(f"{idx}- {q['question']}")
+        # Convert question number to Arabic numerals and add space after the number
+        arabic_number = convert_to_arabic_numerals(idx)
+        question_paragraph = doc.add_paragraph(f"{arabic_number}- {q['question']}")
         set_rtl_and_justify(question_paragraph)
 
         # Add options in table format
@@ -120,7 +127,7 @@ def create_word_file(header, footer, questions, true_false_statements, file_name
 st.title("إنشاء نماذج أسئلة")
 
 # Header and footer inputs
-header = st.text_area("أدخل العنوان الرئيسي (Header):", "مذاكرة الصف الثالث الثانوي\nالاسم: \nالتاريخ: \nالدرجة:")
+header = st.text_area("أدخل العنوان الرئيسي (Header):", "أ.نديم_دحدل")
 footer = st.text_area("أدخل التذييل (Footer):", "انتهت الأسئلة")
 
 # True/False statements
