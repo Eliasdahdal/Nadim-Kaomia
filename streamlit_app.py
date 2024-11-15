@@ -7,6 +7,7 @@ from docx.oxml import OxmlElement, parse_xml
 from io import BytesIO
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+import zipfile
 
 # Function to convert numbers to Arabic numerals
 def convert_to_arabic_numerals(number):
@@ -47,7 +48,7 @@ def set_cell_rtl(cell):
         pPr.append(bidi)
 
 # Function to create a Word document for a single model
-def create_word_file(header, footer, questions, true_false_statements, file_name):
+def create_word_file(header, footer, questions, true_false_statements):
     doc = Document()
     set_document_rtl(doc)  # Set the entire document to RTL
 
@@ -144,13 +145,20 @@ true_false_statements = [s for s in true_false_statements_input.split('\n') if s
 # Questions and options
 st.subheader("إضافة أسئلة اختيار من متعدد")
 num_questions = st.number_input("عدد الأسئلة:", min_value=1, value=5, step=1)
+
 questions = []
 for i in range(num_questions):
-    question = st.text_input(f"السؤال {i + 1}:", f"سؤال {i + 1}")
-    options = []
-    for j in range(4):
-        options.append(st.text_input(f"الخيار {j + 1} للسؤال {i + 1}:", f"خيار {j + 1}"))
-    questions.append({"question": question, "options": options})
+    with st.expander(f"السؤال {i + 1}"):
+        question = st.text_input(f"السؤال {i + 1}:", f"سؤال {i + 1}")
+        options = []
+        col1, col2 = st.columns(2)
+        with col1:
+            options.append(st.text_input(f"الخيار الأول للسؤال {i + 1}:", f"خيار 1"))
+            options.append(st.text_input(f"الخيار الثالث للسؤال {i + 1}:", f"خيار 3"))
+        with col2:
+            options.append(st.text_input(f"الخيار الثاني للسؤال {i + 1}:", f"خيار 2"))
+            options.append(st.text_input(f"الخيار الرابع للسؤال {i + 1}:", f"خيار 4"))
+        questions.append({"question": question, "options": options})
 
 # Number of models and file name
 num_models = st.number_input("عدد النماذج:", min_value=1, value=3, step=1)
@@ -163,21 +171,25 @@ if uploaded_file:
     header = doc.paragraphs[0].text if doc.paragraphs else header
     footer = doc.paragraphs[-1].text if doc.paragraphs else footer
 
-# Generate models
+# Generate models and create ZIP file
 if st.button("إنشاء النماذج"):
-    for i in range(1, num_models + 1):
-        shuffled_questions = random.sample(questions, len(questions))
-        shuffled_statements = random.sample(true_false_statements, len(true_false_statements))
-        buffer = create_word_file(
-            header,
-            footer,
-            shuffled_questions,
-            shuffled_statements,
-            f"{file_name}_{i}.docx"
-        )
-        st.download_button(
-            label=f"تحميل نموذج {i}",
-            data=buffer,
-            file_name=f"{file_name}_{i}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        for i in range(1, num_models + 1):
+            shuffled_questions = random.sample(questions, len(questions))
+            shuffled_statements = random.sample(true_false_statements, len(true_false_statements))
+            buffer = create_word_file(
+                header,
+                footer,
+                shuffled_questions,
+                shuffled_statements
+            )
+            zip_file.writestr(f"{file_name}_{i}.docx", buffer.getvalue())
+
+    zip_buffer.seek(0)
+    st.download_button(
+        label="تحميل جميع النماذج كملف مضغوط",
+        data=zip_buffer,
+        file_name=f"{file_name}_models.zip",
+        mime="application/zip"
+    )
